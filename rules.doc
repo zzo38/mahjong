@@ -1,0 +1,93 @@
+This file describes the configuration format for defining mahjong rules.
+
+
+=== Syntax ===
+
+Comments start with ; and last until the end of the line.
+
+A tile identifier starts with ' and is then one of the following:
+
+* nM or nP or nS where n is 0 to 15 means one of the numbered tiles.
+(Numbered tiles are normally 1 to 9, but this program allows you to add
+tiles with other numbers as well.)
+
+* E S W N for winds.
+
+* C F P for dragons.
+
+* XnF and XnS for flowers and seasons; n is a number 1 to 4.
+
+* XnK and XnQ for emperors and empresses; n is a number 1 to 4.
+
+
+=== Top-level definitions ===
+
+(^tileflag ^tileflag...)
+  Define a set of mutually exclusive tile flags. The first name in each
+  block is the default within that set. Each set must contain at least two
+  flags and at most sixteen flags.
+
+(PLAYERS number) or (PLAYERS players)
+  Defines the players. This can either be a number of players (2, 3, or 4;
+  the default is 4) or blocks defining the properties of each player (the
+  number of blocks must be 2, 3, or 4).
+
+(TILES tiles)
+  Defines the set of tiles to use. (The default is to use the full
+  standard set of mahjong tiles without flowers, red fives, jokers, etc.)
+
+
+=== Set of tiles ===
+
+This block can contain any of the clauses:
+
+* PLUS: Adds the specified tiles to the set. The word PLUS can be omitted
+for the first clause in the TILES block.
+
+* MINUS: Removes the specified tiles from the set. If there are more than
+one match, only as many as are specified are removed, and not all of them.
+To remove all of them, use MINUS ALL instead.
+
+* MINUS ALL: Removes all matching tiles from the set.
+
+* TIMES: Multiplies the tiles in the set by the specified number, or by a
+specified set of tile flags, or a combination of such.
+
+* MODIFY: This clause must include a BY sub-clause; write the matching part
+after MODIFY and the modifications to make after BY. This replaces whatever
+is matched with those modified by the part after BY; the part after BY must
+be a single tile flag, or a single () block with only tile flags.
+
+* MODIFY ALL: Like MODIFY but modifies all matching tiles instead of only
+one of each.
+
+Within each clause, the lists for what can be matching can be in any of the
+following formats. You can have multiples of them; the lists are
+effectively multiplied together, taking all combinations of one of each.
+
+* A plain number: That many multiple. However, it represents an arbitrary
+match; if this is the only specification in a PLUS clause then it will be
+a tile underspecification error, but it can be combined with others.
+
+* The syntax (number TO number) or ('tile TO 'tile), which is the same as
+writing all of those numbers in sequence explicitly, but is shorter.
+
+* A list in () of tile qualities.
+
+* A list in () of tile qualities and/or lists in (). The inside lists are
+effectively combined into a single tile quality; this can be useful for
+setting multiple groups of tile flags.
+
+Tile qualities can be a tile (with the ' syntax), a number (representing
+tiles with that number), one of the words MANZU PINZU SOUZU (representing
+tiles with that suit), or a tile flag (representing tiles that have that
+tile flag and not any of the others in the mutually exclusive set).
+
+For example:  PLUS (1 TO 9) (MANZU PINZU SOUZU)  means all of the numbered
+tiles from 1 to 9 in each suit. If you follow this by  4  or by  TIMES 4
+then it will make four of each.
+
+Note that tile specifications in a PLUS clause must specify at least the
+matching identifier of the tile; a number or suit alone won't do. You do
+not have to specify all tile flags, in which case the defaults are used.
+

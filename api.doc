@@ -1,0 +1,68 @@
+
+=== Callback functions ===
+
+Some of these functions have both a "_g" form and a "_r" form. The "_g"
+form defines it for a game object. The "_r" form defines it for a rules
+object, which will then be inherited by any game object that is created
+from that rules object.
+
+(TODO)
+
+
+=== Character encoding ===
+
+(TODO)
+
+
+=== Games ===
+
+(TODO)
+
+Mahjong_Game*mahjong_create_game(Mahjong_Rules*ru);
+  
+
+
+=== Localization ===
+
+(TODO)
+
+
+=== Rules ===
+
+These functions are not thread-safe and are not reentrant. Do not call any
+library functions (except as otherwise specified) while these functions
+are running.
+
+The use should be to first call mahjong_create_rules, and then call
+mahjong_load_rules to load the rules. After that, you may set callback
+functions and then create the game object, or first create the game
+object and then set the callback functions for the game object. When you
+are finished, you can call mahjong_destroy_rules, although this is not
+necessary if the program will terminate soon anyways.
+
+Mahjong_Rules*mahjong_create_rules(void);
+  Creates a new empty rules object.
+
+void mahjong_destroy_rules(Mahjong_Rules*ru);
+  Destroys a rules object. This function is a harmless no-op if the
+  argument is null. Do not destroy a rules object that is currently in
+  use by a game object.
+
+void mahjong_dump_rules(Mahjong_Rules*rul,FILE*fp);
+  Writes an ASCII representation of the internal storage of the rules to
+  the specified file. This is mainly used for debugging; there is no way
+  to restore the rules from this representation.
+
+int mahjong_load_rules(Mahjong_Rules*ru,FILE*inf,FILE*errors,Mahjong_LoadOption*option);
+  Loads rules from the "inf" stream, which does not need to be seekable.
+  The "errors" stream is optional; if it is not null then any error
+  messages are written to the stream. The "option" is also optional and
+  can be null if no special options are used. The return value is 0 if
+  successful or -1 if it is an error. Error messages during loading are
+  always in English and always use the ASCII character encoding.
+
+void mahjong_reset_rules(Mahjong_Rules*ru);
+  Reset a rules object so that it can be used to load another set of rules.
+  This function is a harmless no-op if the argument is null. Do not reset a
+  rules object that is currently in use by a game object.
+
