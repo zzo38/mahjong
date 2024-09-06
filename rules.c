@@ -24,6 +24,8 @@ exit
 #define TOK_IDTILE '\''
 #define TOK_NUMBER '0'
 #define TOK_TILEFLAG '^'
+#define TOK_GLOBALVAR '@'
+#define TOK_PLAYERVAR '%'
 
 static const uint8_t catcode[128]={
   // Spaces
@@ -492,6 +494,141 @@ static void define_tile_flags(void) {
   if(nexttileflag>8) Error("Too many tile flags");
 }
 
+static void define_players(void) {
+  int i;
+  defining=0;
+  nexttok();
+  if(tokent==TOK_NUMBER) {
+    if(tokenv<2 || tokenv>4) Error("Number of players must be 2, 3, or 4");
+    ru->nplayer=tokenv;
+    nexttok();
+    goto end;
+  }
+  ru->nplayer=0;
+  while(tokent=='(') {
+    if(ru->nplayer==4) Error("Too many players");
+    for(;;) {
+      nexttok();
+      if(tokent==')') break;
+      if(tokent==TOK_WORD) {
+        switch(tokenv) {
+          case KW_TEAM:
+            nexttok();
+            if(tokent!=TOK_NUMBER || (tokenv&~3)) Error("Expected number 0 to 3");
+            ru->player[ru->nplayer].team=tokenv;
+            break;
+        }
+      } else {
+        Error("Syntax error");
+      }
+    }
+    ru->nplayer++;
+    nexttok();
+  }
+  if(ru->nplayer<2) Error("Not enough players");
+  end:
+  if(tokent!=')') Error("Unterminated PLAYERS block");
+  nexttok();
+  return;
+}
+
+static void define_variables(void) {
+  Name*na=tokennam;
+  VarRules*vr;
+  uint8_t f;
+  char g=(tokent==TOK_GLOBALVAR);
+  if(defining==2) Error("%s is already defined",tokenstr);
+  defining=0;
+  if((g?ru->ngvar:ru->npvar)>253) Error("Too many %s variables",g?"global":"player");
+  tokennam->value=(g?ru->ngvar++:ru->npvar++);
+  if(g) {
+    vr=realloc(ru->gvar,ru->ngvar*sizeof(VarRules));
+    if(!vr) Error("Allocation failed");
+    ru->gvar=vr;
+  } else {
+    vr=realloc(ru->pvar,ru->npvar*sizeof(VarRules));
+    if(!vr) Error("Allocation failed");
+    ru->pvar=vr;
+  }
+  vr+=tokennam->value;
+  vr->vis=VIS_V_NONE;
+  vr->flag=VF_NULL;
+  vr->type=0;
+  vr->value.t=TY_NULL;
+  vr->value.v=0;
+  nexttok();
+  if(tokent==TOK_WORD && tokenv==KW_TEAM) {
+    if(g) Error("TEAM is not valid for global variables");
+    vr->flag|=VF_TEAM;
+    nexttok();
+  }
+  if(tokent==TOK_WORD) switch(tokenv) {
+    case KW_PRIVATE: if(g) Error("PRIVATE visibility is not valid for global variables"); vr->vis=VIS_V_OWNER; nexttok(); break;
+    case KW_FACING: if(g) Error("FACING visibility is not valid for global variables"); vr->vis=VIS_V_BACK|VIS_V_OWNER; nexttok(); break;
+    case KW_PUBLIC: vr->vis=VIS_V_FRONT; nexttok(); break;
+    case KW_BACK: vr->vis=VIS_V_BACK; nexttok(); break;
+  }
+  if(tokent==TOK_WORD && tokenv==KW_LIST) {
+    nexttok();
+    if(tokent==TOK_WORD && tokenv==KW_OF) nexttok();
+    vr->type=TY_LIST;
+  } else if(tokent==TOK_WORD && tokenv==KW_SET) {
+    nexttok();
+    if(tokent==TOK_WORD && tokenv==KW_OF) nexttok();
+    vr->type=TY_SET;
+  }
+  if(tokent==TOK_WORD) switch(tokenv) {
+    case KW_ANY: vr->type|=TY_ANY; nexttok(); break;
+    case KW_NUMBER: vr->type|=TY_NUMBER; nexttok(); break;
+    case KW_TILE: vr->type|=TY_TILE; nexttok(); break;
+    case KW_PLAYER: vr->type|=TY_PLAYER; nexttok(); break;
+    case KW_DIRECTION: vr->type|=TY_DIR; nexttok(); break;
+    case KW_BOOLEAN: vr->type|=TY_BOOLEAN; nexttok(); break;
+  }
+  if(!(vr->type&TY_ANY)) vr->type|=TY_ANY;
+  if((vr->vis&VIS_V_BACK) && (vr->type&TY_ANY)!=TY_TILE) Error("BACK or FACING visibility cannot be used with types other than TILE");
+  if(tokent==TOK_WORD) switch(tokenv) {
+    case KW_INIT: vr->flag|=VF_INIT; nexttok(); break;
+    case KW_GAME: vr->flag|=VF_GAME; nexttok(); break;
+    case KW_ROUND: vr->flag|=VF_ROUND; nexttok(); break;
+    case KW_DEAL: vr->flag|=VF_DEAL; nexttok(); break;
+    case KW_NONREPEAT: vr->flag|=VF_NONREPEAT; nexttok(); break;
+  }
+  if(vr->flag&0x0F) {
+    if(tokent==TOK_WORD && tokenv==KW_NULL) {
+      nexttok();
+    } else {
+      switch(vr->type) {
+        case TY_BOOLEAN:
+          if(tokent==TOK_NUMBER && !(tokenv&~1)) vr->value.t=TY_BOOLEAN,vr->value.v=tokenv,nexttok();
+          else if(tokent==TOK_WORD && tokenv==KW_TRUE) vr->value.t=TY_BOOLEAN,vr->value.v=1,nexttok();
+          else if(tokent==TOK_WORD && tokenv==KW_FALSE) vr->value.t=TY_BOOLEAN,vr->value.v=0,nexttok();
+          break;
+        case TY_NUMBER:
+          if(tokent==TOK_NUMBER) vr->value.t=TY_NUMBER,vr->value.v=tokenv,nexttok();
+          break;
+        case TY_TILE:
+          if(tokent==TOK_IDTILE) {
+            vr->value.t=TY_TILE;
+            vr->value.v=tokenv;
+            for(f=0;tokent==TOK_TILEFLAG;) {
+              if(f&(tokenv>>8)) Error("Conflicting tile flags in variable definition");
+              f|=tokenv>>8;
+              vr->value.v|=(tokenv&0xFF)<<8;
+              nexttok();
+            }
+          }
+          break;
+        case TY_SET: case TY_SET+TY_ANY:
+          Error("Improper SET type");
+      }
+    }
+  } else {
+    vr->flag|=VF_INIT;
+  }
+  if(tokent!=')') Error("Improper token in variable definition");
+}
+
 static void load_rules_1(void) {
   while(nexttok(),tokent!=TOK_EOF) {
     if(tokent!='(') Error("Expected ("); //))
@@ -499,11 +636,14 @@ static void load_rules_1(void) {
     nexttok();
     if(tokent==TOK_WORD) {
       switch(tokenv) {
+        case KW_PLAYERS: define_players(); break;
         case KW_TILES: define_deck(); break;
         default: Error("Improper token");
       }
     } else if(tokent==TOK_TILEFLAG) {
       define_tile_flags();
+    } else if(tokent==TOK_GLOBALVAR || tokent==TOK_PLAYERVAR) {
+      define_variables();
     } else {
       Error("Improper token");
     }
@@ -539,9 +679,12 @@ int mahjong_load_rules(Rules*rul,FILE*inf,FILE*errors,Mahjong_LoadOption*opt) {
   if(!ru->deck) set_default_deck();
   // Reduce memory usage
   ru->deck=realloc(ru->deck,ru->ndeck*sizeof(uint16_t))?:ru->deck;
-  // Done
+  // Load flag
   ru->loaded=1;
   end:
+  // Move and/or delete name data
+  // (TODO)
+  // End
   return ru->loaded==1?0:-1;
 }
 
@@ -551,6 +694,10 @@ void mahjong_reset_rules(Rules*ru) {
   free(ru->deck);
   ru->deck=0;
   ru->loaded=0;
+  ru->ngvar=ru->npvar=0;
+  free(ru->gvar);
+  free(ru->pvar);
+  ru->gvar=ru->pvar=0;
 }
 
 void mahjong_destroy_rules(Rules*ru) {
@@ -572,8 +719,10 @@ void mahjong_dump_rules(Rules*r,FILE*f) {
   for(i=0;i<r->ndeck;i++) fprintf(f," %04X",r->deck[i]);
   fputc('\n',f);
   fprintf(f,"Players:\n");
-  for(i=0;i<r->nplayer;i++) {
-    fprintf(f,"  %d: team=%d\n",i,r->player[i].team);
-  }
+  for(i=0;i<r->nplayer;i++) fprintf(f,"  %d: team=%d\n",i,r->player[i].team);
+  fprintf(f,"Player variables:\n");
+  for(i=0;i<r->npvar;i++) fprintf(f,"  %d: vis=%X,flag=%X,type=%X; (%lX,%lX)\n",i,r->pvar[i].vis,r->pvar[i].flag,r->pvar[i].type,(long)r->pvar[i].value.t,(long)r->pvar[i].value.v);
+  fprintf(f,"Global variables:\n");
+  for(i=0;i<r->ngvar;i++) fprintf(f,"  %d: vis=%X,flag=%X,type=%X; (%lX,%lX)\n",i,r->gvar[i].vis,r->gvar[i].flag,r->gvar[i].type,(long)r->gvar[i].value.t,(long)r->gvar[i].value.v);
 }
 

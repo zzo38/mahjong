@@ -27,6 +27,9 @@ tiles with other numbers as well.)
   block is the default within that set. Each set must contain at least two
   flags and at most sixteen flags.
 
+(variable ...)
+  Define a variable.
+
 (PLAYERS number) or (PLAYERS players)
   Defines the players. This can either be a number of players (2, 3, or 4;
   the default is 4) or blocks defining the properties of each player (the
@@ -90,4 +93,62 @@ then it will make four of each.
 Note that tile specifications in a PLUS clause must specify at least the
 matching identifier of the tile; a number or suit alone won't do. You do
 not have to specify all tile flags, in which case the defaults are used.
+
+
+=== Variables ===
+
+A variable definition is either a global variable with @ at first, or a
+local variable with % at first. Either way, the syntax is:
+  (name team visibility type when value)
+
+* Team: Optionally the word TEAM to share a variable by teams. This is not
+valid for global variables.
+
+* Visibility: Also optional; the default is that nobody can see it at all.
+It may be PRIVATE to be visible to only the player that it belongs to,
+FACING for the front to be visible by the player that it belongs to and for
+the back to be visible to other players, PUBLIC to be visible to anyone, or
+BACK for only the back to be visible to everyone. PRIVATE and FACING are
+not valid for global variables.
+
+* Type: The data type; if not specified, data of any scalar type can be
+stored in this variable. Start with LIST or SET (either optionally followed
+by OF) for a list or set type. The valid types are then: ANY, NUMBER, TILE,
+PLAYER, DIRECTION, or BOOLEAN. The type must be specified if the visibility
+is specified, but you can specify a type without visibility. Furthermore,
+if the visibility is FACING or BACK, then the type must be TILE, LIST OF
+TILE, or SET OF TILE.
+
+* When: Specifies when this variable is reset. This is also optional. This
+can be INIT (only at the beginning of a set of games and when mahjong_reset
+is called), GAME (at the beginning of each game), ROUND (when the round
+wind changes), DEAL (at the beginning of each deal), or NONREPEAT (at the
+beginning of each deal that does not repeat the same wind of each players).
+
+* Value: This is optional, but if specified then the time that it is reset
+also must be specified. The value can always be NULL regardless of the
+type, otherwise it can be one of the below according to the type, but for
+a LIST or SET type only NULL is possible.
+
+Values by types:
+
+* BOOLEAN: TRUE or FALSE.
+
+* NUMBER: Any numeric token.
+
+* TILE: A tile. You may also specify zero or more tile flags afterward;
+any that are not specified will use the default value.
+
+If (when value) is not specified, then INIT NULL is the default setting.
+
+
+=== Players ===
+
+A player definition () block inside of a (PLAYERS) block can contain any
+of the following clauses:
+
+* TEAM number: Define the team that this player belongs to, from 0 to 3.
+If not specified, then the first player is 0, the second is 1, etc.
+
+Currently, there are no other clauses in the (PLAYERS) block.
 
