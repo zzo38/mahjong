@@ -30,14 +30,26 @@ tiles with other numbers as well.)
 (variable ...)
   Define a variable.
 
+(HAND number)
+  Define the hand size. This must be a number between 6 and 30 (inclusive)
+  and cannot be exactly one more than a multiple of three. The default
+  value is fourteen.
+
 (PLAYERS number) or (PLAYERS players)
   Defines the players. This can either be a number of players (2, 3, or 4;
   the default is 4) or blocks defining the properties of each player (the
   number of blocks must be 2, 3, or 4).
 
+(SHOW ...)
+  Specifies to show some things which are not normally shown.
+
 (TILES tiles)
   Defines the set of tiles to use. (The default is to use the full
   standard set of mahjong tiles without flowers, red fives, jokers, etc.)
+
+(VISIBILITY ...)
+  Define global visibility of the walls and of other player's tiles. See
+  the below sections for details.
 
 
 === Set of tiles ===
@@ -151,4 +163,61 @@ of the following clauses:
 If not specified, then the first player is 0, the second is 1, etc.
 
 Currently, there are no other clauses in the (PLAYERS) block.
+
+
+=== Global visibility ===
+
+This block can contain the visibility of any of the following:
+
+* HAND: Other player's hands.
+
+* WALL: The live wall.
+
+* DEADWALL: The dead wall.
+
+* KAN: Other player's closed kan.
+
+* FLOWERS: Other player's declared flowers.
+
+* DORA: Dora indicators.
+
+* URADORA: Uradora indicators.
+
+After each thing to specify the visibility of, you can specify one of
+the following types of visibility:
+
+* HIDDEN: They cannot be seen.
+
+* CLOSED or BACK: The back of the tiles can be seen.
+
+* OPEN or FRONT: The front of the tiles can be seen.
+
+* MIXED: Only valid for KAN, and means that two tiles will be open and
+two tiles will be closed. (Normally this does not hide any additional
+information, although it may do so if jokers are allowed in closed quads.)
+
+* STACKED: This must be followed by CLOSED or OPEN (or the synonyms BACK
+or FRONT). This is only valid for WALL and DEADWALL, and means that the
+bottom tile is hidden but the top is visible.
+
+The defaults are:
+  HAND CLOSED
+  WALL HIDDEN
+  DEADWALL HIDDEN
+  KAN MIXED
+  FLOWERS OPEN
+  DORA OPEN
+  URADORA HIDDEN
+
+
+=== Show ===
+
+The SHOW block can contain any of:
+
+* DEALT: Reveal the contents of each player's initially dealt hand.
+
+* TENPAI: Show if each player tenpai.
+
+* TSUMOGIRI: Allows players to tell if an opponent discarded the card just
+drawn or a card that was already in their hand from before.
 

@@ -6,6 +6,10 @@ enum {
   VIS_I_LIVE_WALL,
   VIS_I_DEAD_WALL,
   VIS_I_KAN,
+  VIS_I_FLOWERS,
+  VIS_I_DORA,
+  VIS_I_URADORA,
+  VIS_NI, // last one
 };
 
 #define VIS_V_NONE 0x00
@@ -22,6 +26,10 @@ enum {
 #define VF_DEAL 0x04
 #define VF_NONREPEAT 0x05
 #define VF_TEAM 0x80
+
+#define SHOW_TSUMOGIRI 0x01
+#define SHOW_DEALT 0x02
+#define SHOW_TENPAI 0x04
 
 #define TY_NULL 0x00
 #define TY_NUMBER 0x01
@@ -66,6 +74,9 @@ typedef struct Mahjong_Rules {
   VarRules*pvar;
   uint8_t nplayer;
   PlayerRules player[4];
+  uint8_t handsize;
+  uint8_t visibility[VIS_NI];
+  uint16_t show;
 } Rules;
 
 typedef struct Mahjong_Game {

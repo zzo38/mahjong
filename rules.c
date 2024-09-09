@@ -629,6 +629,59 @@ static void define_variables(void) {
   if(tokent!=')') Error("Improper token in variable definition");
 }
 
+static void define_visibility(void) {
+  uint8_t c,w;
+  defining=0;
+  for(;;) {
+    nexttok();
+    if(tokent==')') break;
+    if(tokent!=TOK_WORD) goto bad;
+    switch(tokenv) {
+      case KW_HAND: c=VIS_I_HAND; w=0; break;
+      case KW_WALL: c=VIS_I_LIVE_WALL; w=VIS_V_STACKED; break;
+      case KW_DEADWALL: c=VIS_I_DEAD_WALL; w=VIS_V_STACKED; break;
+      case KW_KAN: c=VIS_I_KAN; w=VIS_V_MIXED; break;
+      case KW_FLOWERS: c=VIS_I_FLOWERS; w=0; break;
+      case KW_DORA: c=VIS_I_DORA; w=0; break;
+      case KW_URADORA: c=VIS_I_URADORA; w=0; break;
+      default: goto bad;
+    }
+    nexttok();
+    if(tokent!=TOK_WORD) goto bad;
+    switch(tokenv) {
+      case KW_HIDDEN: w=0; break;
+      case KW_FRONT: case KW_OPEN: w=VIS_V_FRONT; break;
+      case KW_BACK: case KW_CLOSED: w=VIS_V_BACK; break;
+      case KW_MIXED: if(w!=VIS_V_MIXED) goto bad; break;
+      case KW_STACKED: if(w!=VIS_V_STACKED) goto bad; break;
+      default: bad: Error("Unexpected token in VISIBILITY block");
+    }
+    if(tokenv==KW_STACKED) {
+      nexttok();
+      if(tokent!=TOK_WORD) goto bad;
+      switch(tokenv) {
+        case KW_HIDDEN: w=0; break;
+        case KW_FRONT: case KW_OPEN: w|=VIS_V_FRONT; break;
+        case KW_BACK: case KW_CLOSED: w|=VIS_V_BACK; break;
+        default: goto bad;
+      }
+    }
+    ru->visibility[c]=w;
+  }
+}
+
+static void define_show(void) {
+  defining=0;
+  while(nexttok(),tokent!=')') {
+    if(tokent!=TOK_WORD) Error("Expected word");
+    switch(tokenv) {
+      case KW_DEALT: ru->show|=SHOW_DEALT; break;
+      case KW_TENPAI: ru->show|=SHOW_TENPAI; break;
+      case KW_TSUMOGIRI: ru->show|=SHOW_TSUMOGIRI; break;
+    }
+  }
+}
+
 static void load_rules_1(void) {
   while(nexttok(),tokent!=TOK_EOF) {
     if(tokent!='(') Error("Expected ("); //))
@@ -636,8 +689,17 @@ static void load_rules_1(void) {
     nexttok();
     if(tokent==TOK_WORD) {
       switch(tokenv) {
+        case KW_HAND:
+          nexttok();
+          if(tokent!=TOK_NUMBER || tokenv<6 || tokenv>30 || tokenv%3==1) Error("Improper hand size");
+          ru->handsize=tokenv;
+          nexttok();
+          if(tokent!=')') Error("Expected end of block");
+          break;
         case KW_PLAYERS: define_players(); break;
+        case KW_SHOW: define_show(); break;
         case KW_TILES: define_deck(); break;
+        case KW_VISIBILITY: define_visibility(); break;
         default: Error("Improper token");
       }
     } else if(tokent==TOK_TILEFLAG) {
@@ -666,6 +728,15 @@ int mahjong_load_rules(Rules*rul,FILE*inf,FILE*errors,Mahjong_LoadOption*opt) {
   // Initialize defaults
   ru->nplayer=4;
   for(i=0;i<4;i++) ru->player[i].team=i;
+  ru->handsize=14;
+  ru->visibility[VIS_I_HAND]=VIS_V_BACK;
+  ru->visibility[VIS_I_LIVE_WALL]=VIS_V_NONE;
+  ru->visibility[VIS_I_DEAD_WALL]=VIS_V_NONE;
+  ru->visibility[VIS_I_KAN]=VIS_V_MIXED;
+  ru->visibility[VIS_I_FLOWERS]=VIS_V_FRONT;
+  ru->visibility[VIS_I_DORA]=VIS_V_FRONT;
+  ru->visibility[VIS_I_URADORA]=VIS_V_NONE;
+  ru->show=0;
   // Load rules from file
   infile=inf;
   errfile=errors;
@@ -677,6 +748,8 @@ int mahjong_load_rules(Rules*rul,FILE*inf,FILE*errors,Mahjong_LoadOption*opt) {
   load_rules_1();
   // Initialize defaults
   if(!ru->deck) set_default_deck();
+  // Verification
+  // (TODO)
   // Reduce memory usage
   ru->deck=realloc(ru->deck,ru->ndeck*sizeof(uint16_t))?:ru->deck;
   // Load flag
@@ -724,5 +797,10 @@ void mahjong_dump_rules(Rules*r,FILE*f) {
   for(i=0;i<r->npvar;i++) fprintf(f,"  %d: vis=%X,flag=%X,type=%X; (%lX,%lX)\n",i,r->pvar[i].vis,r->pvar[i].flag,r->pvar[i].type,(long)r->pvar[i].value.t,(long)r->pvar[i].value.v);
   fprintf(f,"Global variables:\n");
   for(i=0;i<r->ngvar;i++) fprintf(f,"  %d: vis=%X,flag=%X,type=%X; (%lX,%lX)\n",i,r->gvar[i].vis,r->gvar[i].flag,r->gvar[i].type,(long)r->gvar[i].value.t,(long)r->gvar[i].value.v);
+  fprintf(f,"Hand size: %d\n",ru->handsize);
+  fprintf(f,"Visibility:\n ");
+  for(i=0;i<VIS_NI;i++) fprintf(f," %02X",r->visibility[i]);
+  fputc('\n',f);
+  fprintf(f,"Show: %X\n",r->show);
 }
 
