@@ -30,6 +30,15 @@ enum {
 #define SHOW_TSUMOGIRI 0x01
 #define SHOW_DEALT 0x02
 #define SHOW_TENPAI 0x04
+#define SHOW_OVERCLAIM 0x08
+
+#define ROUND_E 0x00
+#define ROUND_S 0x01
+#define ROUND_W 0x02
+#define ROUND_N 0x03
+#define ROUND_PROGRAM 0x40
+#define ROUND_GOTO 0x80
+#define ROUND_STOP 0xFF
 
 #define TY_NULL 0x00
 #define TY_NUMBER 0x01
@@ -76,7 +85,8 @@ typedef struct Mahjong_Rules {
   PlayerRules player[4];
   uint8_t handsize;
   uint8_t visibility[VIS_NI];
-  uint16_t show;
+  uint8_t show;
+  uint8_t rounds[32];
 } Rules;
 
 typedef struct Mahjong_Game {

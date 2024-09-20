@@ -676,10 +676,30 @@ static void define_show(void) {
     if(tokent!=TOK_WORD) Error("Expected word");
     switch(tokenv) {
       case KW_DEALT: ru->show|=SHOW_DEALT; break;
+      case KW_OVERCLAIM: ru->show|=SHOW_OVERCLAIM; break;
       case KW_TENPAI: ru->show|=SHOW_TENPAI; break;
       case KW_TSUMOGIRI: ru->show|=SHOW_TSUMOGIRI; break;
+      default: Error("Unexpected word in SHOW block");
     }
   }
+}
+
+static void define_rounds(void) {
+  int n=0;
+  int r=ROUND_STOP;
+  while(nexttok(),tokent!=')') {
+    if(tokent!=TOK_WORD) Error("Unexpected token in ROUNDS block");
+    if(n==31) Error("Too many rounds");
+    switch(tokenv) {
+      case KW_E: ru->rounds[n++]=ROUND_E; break;
+      case KW_LOOP: if(r!=ROUND_STOP) Error("Extra LOOP"); r=n+ROUND_GOTO; break;
+      case KW_N: ru->rounds[n++]=ROUND_N; break;
+      case KW_S: ru->rounds[n++]=ROUND_S; break;
+      case KW_W: ru->rounds[n++]=ROUND_W; break;
+      default: Error("Unexpected token in ROUNDS block");
+    }
+  }
+  ru->rounds[n]=r;
 }
 
 static void load_rules_1(void) {
@@ -697,6 +717,7 @@ static void load_rules_1(void) {
           if(tokent!=')') Error("Expected end of block");
           break;
         case KW_PLAYERS: define_players(); break;
+        case KW_ROUNDS: define_rounds(); break;
         case KW_SHOW: define_show(); break;
         case KW_TILES: define_deck(); break;
         case KW_VISIBILITY: define_visibility(); break;
@@ -737,6 +758,7 @@ int mahjong_load_rules(Rules*rul,FILE*inf,FILE*errors,Mahjong_LoadOption*opt) {
   ru->visibility[VIS_I_DORA]=VIS_V_FRONT;
   ru->visibility[VIS_I_URADORA]=VIS_V_NONE;
   ru->show=0;
+  memcpy(ru->rounds,"\x00\x01\x02\x03\xFF",5);
   // Load rules from file
   infile=inf;
   errfile=errors;
@@ -802,5 +824,8 @@ void mahjong_dump_rules(Rules*r,FILE*f) {
   for(i=0;i<VIS_NI;i++) fprintf(f," %02X",r->visibility[i]);
   fputc('\n',f);
   fprintf(f,"Show: %X\n",r->show);
+  fprintf(f,"Rounds: ");
+  for(i=0;i<32;i++) fprintf(f," %02X",r->rounds[i]);
+  fputc('\n',f);
 }
 

@@ -3,7 +3,12 @@ This file describes the configuration format for defining mahjong rules.
 
 === Syntax ===
 
+The syntax is case-insensitive.
+
 Comments start with ; and last until the end of the line.
+
+Numbers can be written in decimal, with an optional + or - sign, or in
+hexadecimal with 0x at first.
 
 A tile identifier starts with ' and is then one of the following:
 
@@ -19,6 +24,19 @@ tiles with other numbers as well.)
 
 * XnK and XnQ for emperors and empresses; n is a number 1 to 4.
 
+The other sigils (all of which are prefixes) are for user-defined things
+and they are as follows:
+
+  !  display
+  @  global variables
+  #  scoring unit (e.g. fu, han)
+  $  scoring element (also including irregular hands)
+  %  player variables
+  ^  tile flags (e.g. red fives)
+  &  subroutine
+  ?  question
+  :  program label
+
 
 === Top-level definitions ===
 
@@ -28,7 +46,7 @@ tiles with other numbers as well.)
   flags and at most sixteen flags.
 
 (variable ...)
-  Define a variable.
+  Define a variable (a global variable or a player variable).
 
 (HAND number)
   Define the hand size. This must be a number between 6 and 30 (inclusive)
@@ -39,6 +57,12 @@ tiles with other numbers as well.)
   Defines the players. This can either be a number of players (2, 3, or 4;
   the default is 4) or blocks defining the properties of each player (the
   number of blocks must be 2, 3, or 4).
+
+(ROUNDS ...)
+  Define the sequence of rounds. The default is (ROUNDS E S W N). Each item
+  can be one of the letters E,S,W,N for east,south,west,north, or it can be
+  LOOP to mean that everything afterward will be repeated after it reaches
+  the end (until some other rule stops the game, e.g. negative scores).
 
 (SHOW ...)
   Specifies to show some things which are not normally shown.
@@ -215,6 +239,10 @@ The defaults are:
 The SHOW block can contain any of:
 
 * DEALT: Reveal the contents of each player's initially dealt hand.
+
+* OVERCLAIM: Show other player's calls when you still have time to call the
+tiles yourself. If not specified, then other player's calls will not be
+shown if they are overridden by other players (including you).
 
 * TENPAI: Show if each player tenpai.
 
